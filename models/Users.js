@@ -1,0 +1,20 @@
+let {mongoose} = require ("../db")
+
+// Define the user schema using the Mongoose.Schema constructor
+// user schema requires name, email, and password
+let UserSchema = new mongoose.Schema(
+    {
+        email: {
+            type: String,
+            required: true
+        },
+        password: {
+            type: String,
+            required: true
+        },
+
+    },
+    {timestamps: true}
+)
+
+module.exports = mongoose.model("user", UserSchema)
