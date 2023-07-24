@@ -19,6 +19,35 @@ const upload = multer({
     }
 })
 
+router.post("/checkout", async (req, res) => {
+    const items = req.body.items;
+
+    let lineItems = [];
+    items.forEach(item => {
+        lineItems.push(
+            {
+                price: item.id,
+                quantity: item.quantity
+            }
+        )
+    });
+
+    try {
+        const session = await stripe.checkout.sessions.create({
+            line_items: lineItems,
+            payment_method_types: ['card'],
+            mode: 'payment',
+            success_url: "http://localhost:3000/success",
+            cancel_url: "http://localhost:3000/cancel"
+        });
+
+        res.json({ url: session.url });
+    } catch (error) {
+        console.error("Error creating session:", error);
+        res.status(500).json({ error: "An error occurred while creating the payment session." });
+    }
+})
+
 router.post("/create", upload.single("file"), async (req, res) =>{ //upload.single("image") is middlware that processes an incoming file - this is part of multer
     try{
         let file = req.file
