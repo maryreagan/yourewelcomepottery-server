@@ -1,7 +1,7 @@
 const router = require("express").Router()
 const Product = require("../models/Product")
 const jwt = require ("jsonwebtoken")
-
+let sessionValidation = require("../middlewares/sessionValidation")
 const aws = require("aws-sdk");
 const multer = require("multer");
 const multers3 = require("multer-s3");
@@ -18,6 +18,7 @@ const upload = multer({
         fileSize: 10 * 1024 * 1024
     }
 })
+
 
 router.post("/checkout", async (req, res) => {
     const items = req.body.items;
@@ -49,6 +50,7 @@ router.post("/checkout", async (req, res) => {
 })
 
 router.post("/create", upload.single("file"), async (req, res) =>{ //upload.single("image") is middlware that processes an incoming file - this is part of multer
+
     try{
         let file = req.file
         const imageUrl = file.buffer //file.buffer is a property of multer middleware. Processed file's buffer is accessible Access binary data
@@ -122,7 +124,7 @@ router. get("/:id", async (req, res) =>{
 
 })
 
-router.delete("/delete/:id", async (req, res) =>{
+router.delete("/delete/:id", sessionValidation, async (req, res) =>{
     try{
     let {id} = req.params
     let oneProduct = await Product.deleteOne({_id: id})
@@ -139,11 +141,14 @@ router.delete("/delete/:id", async (req, res) =>{
 
 })
 
-router.put("/update/:id",  upload.none(), async (req, res) =>{
+router.put("/update/:id",sessionValidation, upload.none(), async (req, res) =>{
     try{
+        console.log("HERE")
         let {id} = req.params
         let message = req.body
-        console.log(message)
+        Object.keys(message).forEach(key => {
+            if (message[key] == "") delete message[key]})
+        
         let oneProduct = await Product.updateOne({_id: id},{$set: message})
         console.log(oneProduct)
         if (oneProduct.matchedCount == 0) throw Error("No products found")
@@ -158,7 +163,7 @@ router.put("/update/:id",  upload.none(), async (req, res) =>{
 })
 
 
-router.put("/updateImg/:_id", upload.single("file"), async (req, res) =>{
+router.put("/updateImg/:_id", upload.single("file"),sessionValidation, async (req, res) =>{
     try{
         let {_id} = req.params
         let file = req.file

@@ -11,8 +11,8 @@ let sessionValidation = async (req,res,next) => {
         if (req.method == "OPTIONS") next()
 
         // no Token provided
+        console.log(req.headers.authorization)
         if (!req.headers.authorization) throw Error ("Access denied")
-
         // sanitize token
         let token = req.headers.authorization.includes("Bearer") 
         if (token) {
@@ -20,7 +20,6 @@ let sessionValidation = async (req,res,next) => {
         }
         else{
             token = req.headers.authorization
-        }
         // validate token
         let payload = jwt.verify(token, JWT_KEY)
         if (!payload) throw Error ("Invalid token")
@@ -28,9 +27,9 @@ let sessionValidation = async (req,res,next) => {
         // find User based on payload
         let foundUser = await userSchema.findOne({_id: payload.id})
         if (!foundUser) throw Error ('User does not exist')
-        next()
+        next() 
         // Proceed to the next middleware or route handler
-    }
+    }}
     catch(err){
         res.status(500).json({
             message: `${err}`
@@ -38,4 +37,4 @@ let sessionValidation = async (req,res,next) => {
     }
 }
 
-module.exports= sessionValidation
+module.exports = sessionValidation
