@@ -12,6 +12,7 @@ const PORT = process.env.PORT || 4000
 const HOST = process.env.HOST || "127.0.0.1"
 
 app.use(cors())
+app.use(express.static("public"))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use("/password", passwordController)
