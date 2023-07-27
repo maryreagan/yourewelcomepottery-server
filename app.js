@@ -6,12 +6,16 @@ const { dbConnect } = require("./db")
 let userController = require("./controllers/auth")
 let passwordController = require("./controllers/password")
 let productController = require("./controllers/products")
+//let checkoutController = require("./checkout/stripe")
 let contactUserController = require("./controllers/contactUs")
+
 
 const PORT = process.env.PORT || 4000
 const HOST = process.env.HOST || "127.0.0.1"
 
 app.use(cors())
+app.use(express.static("public"))
+//app.use("/stripe",checkoutController);
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use("/password", passwordController)
