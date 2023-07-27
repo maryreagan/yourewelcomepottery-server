@@ -8,6 +8,7 @@ const multers3 = require("multer-s3");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
 const bodyParser = require('body-parser');
 
+
 const s3 = new aws.S3({
     accessKeyId: process.env.POTTERY_ACCESS_KEY,
     secretAccessKey: process.env.POTTERY_SECRET_KEY,
@@ -23,10 +24,6 @@ const upload = multer({
 
 
 router.post("/checkout", async (req, res) => {
-    /* This function takes the items from the body of the 
-    request and creates a Stripe checkout session. 
-    If the session is successful, 
-    it updates the product quantity in the database.*/
 
     const items = req.body.items;
 
@@ -81,6 +78,7 @@ router.post("/checkout", async (req, res) => {
     }
 })
 
+
 router.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
     
     const sig = req.headers['stripe-signature'];
@@ -98,9 +96,7 @@ router.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req
     switch (event.type) {
         case 'payment_intent.succeeded':
             const paymentIntent = event.data.object;
-            /* if (/* implement ) {
-            // This loops through each line item.
-            for (const item of items) {
+            /*for (const item of items) {
                 // This gets the product object from the database using the priceID field.
                 const product = await Product.findOne({ _id: item._id });
                 console.log(`_id: ${product._id}, item: ${item._id}`);
@@ -112,8 +108,7 @@ router.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req
                     console.log(`PRODUCT QNT AFTER${product.quantity}`)
                     await product.save(); // This saves the updated product in the database.
                 }
-            }
-        } */
+            }*/
             //console.log(paymentIntent.data);
             console.log(`****************************************************************`);
             break;
