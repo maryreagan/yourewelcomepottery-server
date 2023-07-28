@@ -37,9 +37,6 @@ const Product = new mongoose.Schema({
         required: true
     },
 
-    priceID:{
-        type: String,
-    }
 
 
 })

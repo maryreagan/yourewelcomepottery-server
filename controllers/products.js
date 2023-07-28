@@ -101,7 +101,7 @@ router.put("/retrieve", async (req, res) => {
       quantity: parseInt(quantities[index]),
     }));
 
-    console.log(objects)
+    // console.log(objects)
 
      const updatePromises = objects.map((obj) =>
        Product.updateOne({ _id: obj._id }, { $inc: { quantity: -obj.quantity } })
@@ -111,7 +111,6 @@ router.put("/retrieve", async (req, res) => {
 
     res.status(200).json({
         message: "success",
-        objects,
     });
 
   } catch (err) {
@@ -150,7 +149,6 @@ router.post("/create", upload.single("file"), async (req, res) => { //upload.sin
             description,
             quantity,
             tag,
-            priceID
         })
 
         console.log(newProduct)
