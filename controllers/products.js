@@ -36,7 +36,7 @@ router.post("/checkout", async (req, res) => {
 
         const price = await stripe.prices.create({
             product: product.id,
-            unit_amount: item.price*100,
+            unit_amount: item.price * 100,
             currency: 'usd',
         });
 
@@ -69,7 +69,7 @@ router.post("/checkout", async (req, res) => {
 
         res.json({ url: session.url });
 
-        
+
 
     } catch (error) {
         // This logs the error and returns an error message to the client.
@@ -80,7 +80,7 @@ router.post("/checkout", async (req, res) => {
 
 
 router.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
-    
+
     const sig = req.headers['stripe-signature'];
     const payload = req.body
     let event;
