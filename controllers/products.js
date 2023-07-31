@@ -7,6 +7,8 @@ const multer = require("multer");
 const multers3 = require("multer-s3");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
 const bodyParser = require('body-parser');
+let chosenItemsID = [];
+let chosenItemsQuantity = [];
 
 
 const s3 = new aws.S3({
@@ -26,7 +28,9 @@ const upload = multer({
 router.post("/checkout", async (req, res) => {
 
     const items = req.body.items;
-    
+
+       const chosenItemsID = items.map((item) => item._id);
+       const chosenItemsQuantity = items.map((item) => item.quantity);
     // This is an array of line items. Each line item contains the price and quantity of a product.
     const pricePromises = items.map(async (item) => {
 
@@ -61,6 +65,7 @@ router.post("/checkout", async (req, res) => {
 
         // This creates a Stripe checkout session.
         const session = await stripe.checkout.sessions.create({
+
             line_items: lineItems,
             shipping_address_collection: {
                 allowed_countries: ['US'],
@@ -86,50 +91,43 @@ router.post("/checkout", async (req, res) => {
 })
 
 
-router.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
 
-    const sig = req.headers['stripe-signature'];
-    const payload = req.body
-    let event;
+router.put("/retrieve", async (req, res) => {
+  try {
+    const { ids, quantities } = req.body;
 
-    try {
-        event = stripe.webhooks.constructEvent(payload, sig, process.env.STRIPE_WEBHOOK_SECRET);
-    } catch (err) {
-        console.error('Error processing webhook:', err);
-        res.status(400).send(`Webhook Error: ${err.message}`);
-        return;
+    console.log(ids, quantities)
+
+    if (ids.length !== quantities.length) {
+      return res
+        .status(400)
+        .json({ error: "Number of IDs and quantities do not match" });
     }
 
-    switch (event.type) {
-        case 'payment_intent.succeeded':
-            const paymentIntent = event.data.object;
-            /*for (const item of items) {
-                // This gets the product object from the database using the priceID field.
-                const product = await Product.findOne({ _id: item._id });
-                console.log(`_id: ${product._id}, item: ${item._id}`);
-                // This checks if the product exists. If it does, then the code subtracts the quantity from the product quantity in the database.
-                if (product) {
-                    console.log("FOUND PRODUCT!!")
-                    console.log(`PRODUCT QNT BEFORE${product.quantity}`)
-                    product.quantity -= 1 //items.quantity;
-                    console.log(`PRODUCT QNT AFTER${product.quantity}`)
-                    await product.save(); // This saves the updated product in the database.
-                }
-            }*/
-            //console.log(paymentIntent.data);
-            console.log(`****************************************************************`);
-            break;
-        case 'payment_intent.payment_failed':
-            const paymentFailedIntent = event.data.object;
-            // Notify the customer that their payment has failed
-            break;
-        // Handle other event types as needed
-        default:
-            console.log(`Unhandled event type ${event.type}`);
-    }
+    const objects = ids.map((id, index) => ({
+      _id: id,
+      quantity: parseInt(quantities[index]),
+    }));
 
-    res.status(200).end();
+    // console.log(objects)
+
+     const updatePromises = objects.map((obj) =>
+       Product.updateOne({ _id: obj._id }, { $inc: { quantity: -obj.quantity } })
+     );
+
+     await Promise.all(updatePromises);
+
+    res.status(200).json({
+        message: "success",
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      message: "not working",
+    });
+  }
 });
+
 
 router.post("/create", upload.single("file"), async (req, res) => { //upload.single("image") is middlware that processes an incoming file - this is part of multer
 
@@ -159,7 +157,6 @@ router.post("/create", upload.single("file"), async (req, res) => { //upload.sin
             description,
             quantity,
             tag,
-            priceID
         })
 
         console.log(newProduct)

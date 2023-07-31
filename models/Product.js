@@ -35,12 +35,7 @@ const Product = new mongoose.Schema({
     tag: {
         type: String,
         required: true
-    },
-
-    priceID: {
-        type: String,
     }
-
 
 })
 
