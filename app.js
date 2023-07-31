@@ -65,5 +65,5 @@ app.use("/form", contactUserController)
 app.listen(PORT, HOST, () => {
     dbConnect()
     console.log(`[server] listening on ${HOST}: ${PORT}`
-    )  
+    )
 })

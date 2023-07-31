@@ -2,42 +2,40 @@ const { mongoose } = require("../db")
 
 const Product = new mongoose.Schema({
 
-    imageUrl:{
+    imageUrl: {
         type: String,
         required: true,
     },
 
-    altText:{
+    altText: {
         type: String,
         required: true,
     },
 
-    productName:{
+    productName: {
         type: String,
         required: true,
     },
 
-    price:{
+    price: {
         type: Number,
         required: true,
     },
 
-    description:{
+    description: {
         type: String,
         required: false,
     },
 
-    quantity:{
+    quantity: {
         type: Number,
         required: true,
     },
 
-    tag:{
+    tag: {
         type: String,
         required: true
-    },
-
-
+    }
 
 })
 
