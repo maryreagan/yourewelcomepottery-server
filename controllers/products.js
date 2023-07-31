@@ -26,12 +26,13 @@ const upload = multer({
 router.post("/checkout", async (req, res) => {
 
     const items = req.body.items;
-
+    
     // This is an array of line items. Each line item contains the price and quantity of a product.
     const pricePromises = items.map(async (item) => {
 
         const product = await stripe.products.create({
             name: item.productName,
+            images: [item.imageUrl]
         });
 
         const price = await stripe.prices.create({
@@ -61,8 +62,14 @@ router.post("/checkout", async (req, res) => {
         // This creates a Stripe checkout session.
         const session = await stripe.checkout.sessions.create({
             line_items: lineItems,
+            shipping_address_collection: {
+                allowed_countries: ['US'],
+            },
             payment_method_types: ['card'],
             mode: 'payment',
+            automatic_tax: {
+                enabled: true,
+            },
             success_url: "http://localhost:5173/success?session_id={CHECKOUT_SESSION_ID}",
             cancel_url: "http://localhost:5173/cancel"
         });
