@@ -29,8 +29,8 @@ router.post("/checkout", async (req, res) => {
 
     const items = req.body.items;
 
-       const chosenItemsID = items.map((item) => item._id);
-       const chosenItemsQuantity = items.map((item) => item.quantity);
+    const chosenItemsID = items.map((item) => item._id);
+    const chosenItemsQuantity = items.map((item) => item.quantity);
     // This is an array of line items. Each line item contains the price and quantity of a product.
     const pricePromises = items.map(async (item) => {
 
@@ -65,7 +65,68 @@ router.post("/checkout", async (req, res) => {
 
         // This creates a Stripe checkout session.
         const session = await stripe.checkout.sessions.create({
-
+            shipping_options: [
+                {
+                    shipping_rate_data: {
+                        type: 'fixed_amount',
+                        fixed_amount: {
+                            amount: 0,
+                            currency: 'usd',
+                        },
+                        display_name: 'Pick up order',
+                        delivery_estimate: {
+                            minimum: {
+                                unit: 'business_day',
+                                value: 1,
+                            },
+                            maximum: {
+                                unit: 'business_day',
+                                value: 7,
+                            },
+                        },
+                    },
+                },
+                {
+                    shipping_rate_data: {
+                        type: 'fixed_amount',
+                        fixed_amount: {
+                            amount: 1500,
+                            currency: 'usd',
+                        },
+                        display_name: 'Ground shipping',
+                        delivery_estimate: {
+                            minimum: {
+                                unit: 'business_day',
+                                value: 3,
+                            },
+                            maximum: {
+                                unit: 'business_day',
+                                value: 10,
+                            },
+                        },
+                    },
+                },
+                {
+                    shipping_rate_data: {
+                        type: 'fixed_amount',
+                        fixed_amount: {
+                            amount: 2500,
+                            currency: 'usd',
+                        },
+                        display_name: 'Next day air',
+                        delivery_estimate: {
+                            minimum: {
+                                unit: 'business_day',
+                                value: 1,
+                            },
+                            maximum: {
+                                unit: 'business_day',
+                                value: 1,
+                            },
+                        },
+                    },
+                },
+            ],
             line_items: lineItems,
             shipping_address_collection: {
                 allowed_countries: ['US'],
@@ -75,7 +136,9 @@ router.post("/checkout", async (req, res) => {
             automatic_tax: {
                 enabled: true,
             },
+          
             success_url: `http://localhost:5173/success?ids=${chosenItemsID}&quantities=${chosenItemsQuantity}`,
+
             cancel_url: "http://localhost:5173/cancel"
         });
 
@@ -93,39 +156,39 @@ router.post("/checkout", async (req, res) => {
 
 
 router.put("/retrieve", async (req, res) => {
-  try {
-    const { ids, quantities } = req.body;
+    try {
+        const { ids, quantities } = req.body;
 
-    console.log(ids, quantities)
+        console.log(ids, quantities)
 
-    if (ids.length !== quantities.length) {
-      return res
-        .status(400)
-        .json({ error: "Number of IDs and quantities do not match" });
+        if (ids.length !== quantities.length) {
+            return res
+                .status(400)
+                .json({ error: "Number of IDs and quantities do not match" });
+        }
+
+        const objects = ids.map((id, index) => ({
+            _id: id,
+            quantity: parseInt(quantities[index]),
+        }));
+
+        // console.log(objects)
+
+        const updatePromises = objects.map((obj) =>
+            Product.updateOne({ _id: obj._id }, { $inc: { quantity: -obj.quantity } })
+        );
+
+        await Promise.all(updatePromises);
+
+        res.status(200).json({
+            message: "success",
+        });
+
+    } catch (err) {
+        res.status(500).json({
+            message: "not working",
+        });
     }
-
-    const objects = ids.map((id, index) => ({
-      _id: id,
-      quantity: parseInt(quantities[index]),
-    }));
-
-    // console.log(objects)
-
-     const updatePromises = objects.map((obj) =>
-       Product.updateOne({ _id: obj._id }, { $inc: { quantity: -obj.quantity } })
-     );
-
-     await Promise.all(updatePromises);
-
-    res.status(200).json({
-        message: "success",
-    });
-
-  } catch (err) {
-    res.status(500).json({
-      message: "not working",
-    });
-  }
 });
 
 
