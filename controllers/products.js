@@ -193,17 +193,15 @@ router.put("/retrieve", async (req, res) => {
             from: process.env.GMAIL_USER,
             to: process.env.NOTIFICATION_EMAIL, // Change this to the recipient email address
             subject: "Product Update",
-            text: `The following products have been updated: ${JSON.stringify(
-                soldProducts
-            )}`,
+            text: `Product Update Notification: The following products have been updated: ${JSON.stringify(soldProducts, null, 2)}
+            Thank you for using our service.`,
         };
-
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                    user: process.env.GMAIL_USER,
-                    pass: process.env.GMAIL_PASSWORD
-                }
+                user: process.env.GMAIL_USER,
+                pass: process.env.GMAIL_PASSWORD
+            }
         })
 
         transporter.sendMail(mailOptions, (error, info) => {
