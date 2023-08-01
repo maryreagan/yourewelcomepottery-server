@@ -7,6 +7,7 @@ const multer = require("multer");
 const multers3 = require("multer-s3");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
 const bodyParser = require('body-parser');
+const nodemailer = require("nodemailer");
 let chosenItemsID = [];
 let chosenItemsQuantity = [];
 
@@ -157,8 +158,6 @@ router.put("/retrieve", async (req, res) => {
     try {
         const { ids, quantities } = req.body;
 
-        console.log(ids, quantities)
-
         if (ids.length !== quantities.length) {
             return res
                 .status(400)
@@ -170,16 +169,53 @@ router.put("/retrieve", async (req, res) => {
             quantity: parseInt(quantities[index]),
         }));
 
-        // console.log(objects)
-
         const updatePromises = objects.map((obj) =>
             Product.updateOne({ _id: obj._id }, { $inc: { quantity: -obj.quantity } })
         );
 
         await Promise.all(updatePromises);
-
+        /* 
         res.status(200).json({
             message: "success",
+        }); */
+
+        const soldProducts = await Promise.all(
+            objects.map(async (obj) => {
+                const product = await Product.findOne({ _id: obj._id });
+                return {
+                    name: product.productName,
+                    quantity: obj.quantity,
+                };
+            })
+        );
+
+        const mailOptions = {
+            from: process.env.GMAIL_USER,
+            to: process.env.NOTIFICATION_EMAIL, // Change this to the recipient email address
+            subject: "Product Update",
+            text: `The following products have been updated: ${JSON.stringify(
+                soldProducts
+            )}`,
+        };
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                    user: process.env.GMAIL_USER,
+                    pass: process.env.GMAIL_PASSWORD
+                }
+        })
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.log("Error sending email:", error);
+                // Handle the error, e.g., return an error response to the client
+                return res.status(500).json({ error: "Failed to send email notification" });
+            } else {
+                console.log("Email sent: " + info.response);
+                // Send the success response to the client after the email is sent
+                return res.status(200).json({ message: "success" });
+            }
         });
 
     } catch (err) {
