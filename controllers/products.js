@@ -136,9 +136,7 @@ router.post("/checkout", async (req, res) => {
             automatic_tax: {
                 enabled: true,
             },
-          
             success_url: `http://localhost:5173/success?ids=${chosenItemsID}&quantities=${chosenItemsQuantity}`,
-
             cancel_url: "http://localhost:5173/cancel"
         });
 
