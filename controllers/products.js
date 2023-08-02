@@ -174,10 +174,6 @@ router.put("/retrieve", async (req, res) => {
         );
 
         await Promise.all(updatePromises);
-        /* 
-        res.status(200).json({
-            message: "success",
-        }); */
 
         const soldProducts = await Promise.all(
             objects.map(async (obj) => {
@@ -189,12 +185,58 @@ router.put("/retrieve", async (req, res) => {
             })
         );
 
+        // Create the HTML table template
+        const htlm = `
+            <html>
+                <head>
+                    <style>
+                        /* Custom styles */
+                        table {
+                        border-collapse: collapse;
+                        width: 50%;
+                        margin: auto; /* Center the table */
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Add box shadow */
+                        font-family: "Salsa-Regular", sans-serif;
+                        }
+                        th {
+                        background-color: #a04d31;
+                        color: white;
+                        padding: 8px;
+                        font-weight: bold;
+                        }
+                        td {
+                        border: 1px solid black;
+                        padding: 8px;
+                        }
+                    </style>
+                </head>
+                <body>
+                <table>
+                    <tr>
+                        <th>Product Name</th>
+                        <th>Quantity Sold</th>
+                    </tr>
+                    ${soldProducts.map(
+                        (product) => `
+                    <tr>
+                        <td>${product.name}</td>
+                        <td>${product.quantity}</td>
+                    </tr>
+                    `
+                    ).join("")}
+                </table>
+                </body>
+            </html>
+        `;
+    
+
         const mailOptions = {
             from: process.env.GMAIL_USER,
             to: process.env.NOTIFICATION_EMAIL, // Change this to the recipient email address
             subject: "Product Update",
-            text: `Product Update Notification: The following products have been updated: ${JSON.stringify(soldProducts, null, 2)}
-            Thank you for using our service.`,
+            /* text: `Product Update Notification: The following products have been updated: ${JSON.stringify(soldProducts, null, 2)}
+            Thank you for using our service.`, */
+            html: htlm,
         };
         const transporter = nodemailer.createTransport({
             service: 'gmail',
