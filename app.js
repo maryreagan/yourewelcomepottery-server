@@ -8,6 +8,7 @@ let passwordController = require("./controllers/password")
 let productController = require("./controllers/products")
 //let checkoutController = require("./checkout/stripe")
 let contactUserController = require("./controllers/contactUs")
+let lineController = require("./controllers/line")
 
 
 const PORT = process.env.PORT || 4000
@@ -60,6 +61,7 @@ app.use("/password", passwordController)
 app.use("/admin", userController)
 app.use("/products", productController)
 app.use("/form", contactUserController)
+app.use("/line", lineController)
 
 
 app.listen(PORT, HOST, () => {

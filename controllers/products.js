@@ -8,6 +8,7 @@ const multers3 = require("multer-s3");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
 const bodyParser = require('body-parser');
 const nodemailer = require("nodemailer");
+const fetch = require("node-fetch")
 let chosenItemsID = [];
 let chosenItemsQuantity = [];
 
@@ -273,14 +274,13 @@ router.post("/create", upload.fields([
     try {
         // const imageFile = req.files['imageUrl'][0]
         // const imageBuffer = imageFile.buffer.toString("base64")
-        const multipleImgs = req.files['multipleImgs']
-        const multipleImageUrls = []
+            const multipleImgs = req.files['multipleImgs']
+            const multipleImageUrls = []
         // let file = req.file
         // const imageUrl = file.buffer //file.buffer is a property of multer middleware. Processed file's buffer is accessible Access binary data
-        const { altText, productName, price, description, quantity, tag } = req.body
+        const { altText, productName, price, description, quantity, tag, line } = req.body
         
         if (!altText || !productName || !price || !quantity || !tag) throw new Error("All fields are required")
-        console.log(multipleImgs)
         // const data = await s3.upload(s3Params).promise();
         if(multipleImgs && multipleImgs.length>0){
             for (const file of multipleImgs){
@@ -296,7 +296,6 @@ router.post("/create", upload.fields([
                 multipleImageUrls.push(data.Location)
             }
         }
-        console.log(multipleImageUrls)
         const newProduct = new Product({
             altText,
             productName,
@@ -304,15 +303,26 @@ router.post("/create", upload.fields([
             description,
             quantity,
             tag,
-            multipleImgs: multipleImageUrls
+            multipleImgs: multipleImageUrls,
+            line
         })
         console.log(multipleImageUrls)
         console.log(newProduct)
         await newProduct.save()
-
+        let findOne = await Product.findOne({ _id: newProduct._id })
+        console.log(findOne)
+        let fetchResponse = await fetch(`http://127.0.0.1:4000/line/${findOne.tag}/add/${findOne._id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": req.headers.authorization
+            }
+        })
+        let responseJson = await fetchResponse.json()
         res.status(200).json({
             message: "Product added",
-            newProduct
+            newProduct,
+            responseJson
         })
 
     } catch (err) {
@@ -357,11 +367,22 @@ router.get("/:id", async (req, res) => {
 })
 
 router.delete("/delete/:id", sessionValidation, async (req, res) => {
+
     try {
         let { id } = req.params
+        const findOne = await Product.findOne({ _id: id })
+        const fetchResponse = await fetch(`http://127.0.0.1:4000/line/${findOne.tag}/remove/${findOne._id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": req.headers.authorization
+            }
+        })
+        const responseJson = await fetchResponse.json()
         let oneProduct = await Product.deleteOne({ _id: id })
         console.log(oneProduct)
         if (oneProduct.deletedCount == 0) throw Error("No products found")
+
         res.status(200).json({
             message: "Product deleted"
         })
@@ -377,14 +398,25 @@ router.delete("/delete/:id", sessionValidation, async (req, res) => {
 })
 
 router.put("/update/:id", sessionValidation, upload.none(), async (req, res) => {
+    let findOne = await Product.findOne({_id: req.params.id})
+    let originalLine = findOne.tag
     try {
+        const fetchResponse = await fetch(`http://127.0.0.1:4000/line/${originalLine}/move/${req.params.id}/${req.body.tag}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": req.headers.authorization
+            }
+        })
+        const responseJson = await fetchResponse.json()
+
         console.log("HERE")
         let { id } = req.params
         let message = req.body
         Object.keys(message).forEach(key => {
             if (message[key] == "") delete message[key]
         })
-
+        
         let oneProduct = await Product.updateOne({ _id: id }, { $set: message })
         console.log(oneProduct)
         if (oneProduct.matchedCount == 0) throw Error("No products found")
