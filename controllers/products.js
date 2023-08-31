@@ -401,14 +401,18 @@ router.put("/update/:id", sessionValidation, upload.none(), async (req, res) => 
     let findOne = await Product.findOne({_id: req.params.id})
     let originalLine = findOne.tag
     try {
-        const fetchResponse = await fetch(`http://127.0.0.1:4000/line/${originalLine}/move/${req.params.id}/${req.body.tag}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": req.headers.authorization
-            }
-        })
-        const responseJson = await fetchResponse.json()
+        //if the tag is changed, remove the product from the original line and add it to the new line
+        if(req.body.tag !== originalLine || req.body.tag !== ""){
+            console.log( "req tag", req.body.tag, "original tag", originalLine)
+            const fetchResponse = await fetch(`http://127.0.0.1:4000/line/${originalLine}/move/${req.params.id}/${req.body.tag}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": req.headers.authorization
+                }
+            })
+            const responseJson = await fetchResponse.json()
+        }
 
         console.log("HERE")
         let { id } = req.params
