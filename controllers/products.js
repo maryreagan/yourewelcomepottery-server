@@ -8,6 +8,7 @@ const multers3 = require("multer-s3");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
 const bodyParser = require('body-parser');
 const nodemailer = require("nodemailer");
+const fetch = require("node-fetch")
 let chosenItemsID = [];
 let chosenItemsQuantity = [];
 
@@ -37,7 +38,7 @@ router.post("/checkout", async (req, res) => {
 
         const product = await stripe.products.create({
             name: item.productName,
-            images: [item.imageUrl]
+            images: [item.multipleImgs[0]]
         });
 
         const price = await stripe.prices.create({
@@ -266,42 +267,62 @@ router.put("/retrieve", async (req, res) => {
 });
 
 
-router.post("/create", upload.single("file"), async (req, res) => { //upload.single("image") is middlware that processes an incoming file - this is part of multer
+router.post("/create", upload.fields([
+    {name: 'multipleImgs', maxCount: 5}
+]), async (req, res) => { //upload.single("image") is middlware that processes an incoming file - this is part of multer
 
     try {
-        let file = req.file
-        const imageUrl = file.buffer //file.buffer is a property of multer middleware. Processed file's buffer is accessible Access binary data
-        const { altText, productName, price, description, quantity, tag } = req.body
-        console.log(altText, productName, price, quantity, tag)
+        // const imageFile = req.files['imageUrl'][0]
+        // const imageBuffer = imageFile.buffer.toString("base64")
+            const multipleImgs = req.files['multipleImgs']
+            const multipleImageUrls = []
+        // let file = req.file
+        // const imageUrl = file.buffer //file.buffer is a property of multer middleware. Processed file's buffer is accessible Access binary data
+        const { altText, productName, price, description, quantity, tag, line } = req.body
+        
         if (!altText || !productName || !price || !quantity || !tag) throw new Error("All fields are required")
-
-
-        const s3Params = {
-            Bucket: process.env.POTTERY_BUCKET_NAME,
-            Key: `${Date.now()}-${req.file.originalname}`,//req.file is a propery of multer middleware and "originalname" is one of its properties
-            Body: imageUrl,
-            ACL: "public-read",//bucket is private, but will allow users to see image on client side. ACL = Access Control List (controls aces to objects store in S3 bucket)
-            ContentType: req.file.mimtype,
-        };
-
-        const data = await s3.upload(s3Params).promise();
-
+        // const data = await s3.upload(s3Params).promise();
+        if(multipleImgs && multipleImgs.length>0){
+            for (const file of multipleImgs){
+                const buffer = file.buffer.toString("base64")
+                const s3ParamsMulti = {
+                    Bucket: process.env.BUCKET_NAME,
+                    Key: `${Date.now()} ${req.files.originalname}`,
+                    Body: Buffer.from(buffer, "base64"),
+                    acl: 'public-read',
+                    ContentType: file.mimetype,
+                }
+                const data = await s3.upload(s3ParamsMulti).promise()
+                multipleImageUrls.push(data.Location)
+            }
+        }
         const newProduct = new Product({
-            imageUrl: data.Location,
             altText,
             productName,
             price,
             description,
             quantity,
             tag,
+            multipleImgs: multipleImageUrls,
+            line
         })
-
+        console.log(multipleImageUrls)
         console.log(newProduct)
         await newProduct.save()
-
+        let findOne = await Product.findOne({ _id: newProduct._id })
+        console.log(findOne)
+        let fetchResponse = await fetch(`http://127.0.0.1:4000/line/${findOne.tag}/add/${findOne._id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": req.headers.authorization
+            }
+        })
+        let responseJson = await fetchResponse.json()
         res.status(200).json({
             message: "Product added",
-            newProduct
+            newProduct,
+            responseJson
         })
 
     } catch (err) {
@@ -316,7 +337,6 @@ router.post("/create", upload.single("file"), async (req, res) => { //upload.sin
 router.get("/all", async (req, res) => {
     try {
         let allProducts = await Product.find()
-        if (allProducts.length == 0) throw new Error("No products found")
         res.status(200).json(allProducts)
     }
 
@@ -347,11 +367,22 @@ router.get("/:id", async (req, res) => {
 })
 
 router.delete("/delete/:id", sessionValidation, async (req, res) => {
+
     try {
         let { id } = req.params
+        const findOne = await Product.findOne({ _id: id })
+        const fetchResponse = await fetch(`http://127.0.0.1:4000/line/${findOne.tag}/remove/${findOne._id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": req.headers.authorization
+            }
+        })
+        const responseJson = await fetchResponse.json()
         let oneProduct = await Product.deleteOne({ _id: id })
         console.log(oneProduct)
         if (oneProduct.deletedCount == 0) throw Error("No products found")
+
         res.status(200).json({
             message: "Product deleted"
         })
@@ -367,14 +398,29 @@ router.delete("/delete/:id", sessionValidation, async (req, res) => {
 })
 
 router.put("/update/:id", sessionValidation, upload.none(), async (req, res) => {
+    let findOne = await Product.findOne({_id: req.params.id})
+    let originalLine = findOne.tag
     try {
+        //if the tag is changed, remove the product from the original line and add it to the new line
+        if(req.body.tag !== originalLine || req.body.tag !== ""){
+            console.log( "req tag", req.body.tag, "original tag", originalLine)
+            const fetchResponse = await fetch(`http://127.0.0.1:4000/line/${originalLine}/move/${req.params.id}/${req.body.tag}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": req.headers.authorization
+                }
+            })
+            const responseJson = await fetchResponse.json()
+        }
+
         console.log("HERE")
         let { id } = req.params
         let message = req.body
         Object.keys(message).forEach(key => {
             if (message[key] == "") delete message[key]
         })
-
+        
         let oneProduct = await Product.updateOne({ _id: id }, { $set: message })
         console.log(oneProduct)
         if (oneProduct.matchedCount == 0) throw Error("No products found")
@@ -392,24 +438,31 @@ router.put("/update/:id", sessionValidation, upload.none(), async (req, res) => 
 })
 
 
-router.put("/updateImg/:_id", upload.single("file"), sessionValidation, async (req, res) => {
+router.put("/updateImg/:_id",  upload.fields([
+    {name: 'multipleImgs', maxCount: 5}
+]), sessionValidation, async (req, res) => {
+    
     try {
+        const multipleImgs = req.files['multipleImgs']
+        const multipleImageUrls = []
         let { _id } = req.params
-        let file = req.file
-        const image = file.buffer
-        const s3Params = {
-            Bucket: process.env.POTTERY_BUCKET_NAME,
-            Key: `${Date.now()}-${req.file.originalname}`,//req.file is a propery of multer middleware and "originalname" is one of its properties
-            Body: image,
-            ACL: "public-read",//bucket is private, but will allow users to see image on client side. ACL = Access Control List (controls aces to objects store in S3 bucket)
-            ContentType: req.file.mimtype,
-        };
-        const data = await s3.upload(s3Params).promise();
+        if(multipleImgs && multipleImgs.length>0){
+            for (const file of multipleImgs){
+                const buffer = file.buffer.toString("base64")
+                const s3ParamsMulti = {
+                    Bucket: process.env.BUCKET_NAME,
+                    Key: `${Date.now()} ${req.files.originalname}`,
+                    Body: Buffer.from(buffer, "base64"),
+                    acl: 'public-read',
+                    ContentType: file.mimetype,
+                }
+                const data = await s3.upload(s3ParamsMulti).promise()
+                multipleImageUrls.push(data.Location)
+            }
+        }
 
-        let imageUrl = data.Location
-        console.log(imageUrl)
 
-        let oneProduct = await Product.updateOne({ _id: _id }, { imageUrl: imageUrl })
+        let oneProduct = await Product.updateOne({ _id: _id }, { multipleImgs: multipleImageUrls })
         console.log(oneProduct)
         if (oneProduct.matchedCount == 0) throw Error("No products found")
         res.status(200).json({

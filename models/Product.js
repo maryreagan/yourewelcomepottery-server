@@ -1,12 +1,6 @@
 const { mongoose } = require("../db")
 
 const Product = new mongoose.Schema({
-
-    imageUrl: {
-        type: String,
-        required: true,
-    },
-
     altText: {
         type: String,
         required: true,
@@ -33,6 +27,13 @@ const Product = new mongoose.Schema({
     },
 
     tag: {
+        type: String,
+        required: true
+    },
+    multipleImgs: {
+        type: [String]
+    },
+    line: {
         type: String,
         required: true
     }
