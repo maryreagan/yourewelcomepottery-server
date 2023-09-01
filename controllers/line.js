@@ -135,14 +135,14 @@ router.put("/:lineId/remove/:productId", sessionValidation, async (req, res) => 
 router.put("/:original/move/:productId/:newLine", sessionValidation, async (req, res) => {
     try{
         let {original, productId, newLine} = req.params
-        const fetchResponse = await fetch(`http://127.0.0.1:4000/line/${original}/remove/${productId}`, {
+        const fetchResponse = await fetch(`https://youre-welcome-pottery-server-5b5629123e07.herokuapp.com/line/${original}/remove/${productId}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": req.headers.authorization
             }
         })
-        const fetchResponse2 = await fetch(`http://127.0.0.1:4000/line/${newLine}/add/${productId}`, {
+        const fetchResponse2 = await fetch(`https://youre-welcome-pottery-server-5b5629123e07.herokuapp.com/line/${newLine}/add/${productId}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",

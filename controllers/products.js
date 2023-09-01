@@ -138,8 +138,8 @@ router.post("/checkout", async (req, res) => {
             automatic_tax: {
                 enabled: true,
             },
-            success_url: `http://localhost:5173/success?ids=${chosenItemsID}&quantities=${chosenItemsQuantity}`,
-            cancel_url: "http://localhost:5173/cancel"
+            success_url: `https://maryreagan.github.io/yourewelcomepottery-client/success?ids=${chosenItemsID}&quantities=${chosenItemsQuantity}`,
+            cancel_url: "https://maryreagan.github.io/yourewelcomepottery-client/cancel"
         });
 
         res.json({ url: session.url });
@@ -311,7 +311,7 @@ router.post("/create", upload.fields([
         await newProduct.save()
         let findOne = await Product.findOne({ _id: newProduct._id })
         console.log(findOne)
-        let fetchResponse = await fetch(`http://127.0.0.1:4000/line/${findOne.tag}/add/${findOne._id}`, {
+        let fetchResponse = await fetch(`https://youre-welcome-pottery-server-5b5629123e07.herokuapp.com/line/${findOne.tag}/add/${findOne._id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -371,7 +371,7 @@ router.delete("/delete/:id", sessionValidation, async (req, res) => {
     try {
         let { id } = req.params
         const findOne = await Product.findOne({ _id: id })
-        const fetchResponse = await fetch(`http://127.0.0.1:4000/line/${findOne.tag}/remove/${findOne._id}`, {
+        const fetchResponse = await fetch(`https://youre-welcome-pottery-server-5b5629123e07.herokuapp.com/line/${findOne.tag}/remove/${findOne._id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -404,7 +404,7 @@ router.put("/update/:id", sessionValidation, upload.none(), async (req, res) => 
         //if the tag is changed, remove the product from the original line and add it to the new line
         if(req.body.tag !== originalLine || req.body.tag !== ""){
             console.log( "req tag", req.body.tag, "original tag", originalLine)
-            const fetchResponse = await fetch(`http://127.0.0.1:4000/line/${originalLine}/move/${req.params.id}/${req.body.tag}`, {
+            const fetchResponse = await fetch(`https://youre-welcome-pottery-server-5b5629123e07.herokuapp.com/line/${originalLine}/move/${req.params.id}/${req.body.tag}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
