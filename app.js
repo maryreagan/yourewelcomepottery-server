@@ -1,4 +1,4 @@
-require("dotenv").config()
+// require("dotenv").config()
 const express = require("express")
 const cors = require("cors")
 const app = express()
@@ -12,7 +12,7 @@ let lineController = require("./controllers/line")
 
 
 const PORT = process.env.PORT || 4000
-const HOST = process.env.HOST || "127.0.0.1"
+// const HOST = process.env.HOST || "127.0.0.1"
 
 // app.post('/webhook', express.raw({ type: '*/*' }), async (req, res) => {
 //     const sig = req.headers['stripe-signature'];
@@ -64,8 +64,8 @@ app.use("/form", contactUserController)
 app.use("/line", lineController)
 
 
-app.listen(PORT, HOST, () => {
-    dbConnect()
-    console.log(`[server] listening on ${HOST}: ${PORT}`
+app.listen(PORT, async () => {
+    await dbConnect()
+    console.log(`[server] listening on ${PORT}`
     )
 })
